@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<document type="com.apple.InterfaceBuilder3.CocoaTouch.Storyboard.XIB" version="3.0" toolsVersion="16097" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" launchScreen="YES" minToolsVersion="9.0" notFullscreen="YES">
+    <dependencies>
+        <deployment identifier="iOS"/>
+        <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="16097"/>
+    </dependencies>
+    <scenes>
+        <scene sceneID="0">
+            <objects>
+                <viewController id="launchVC" sceneMemberID="0"/>
+                <placeholder placeholderIdentifier="IBFirstResponder" id="first" userLabel="First Responder" sceneMemberID="2"/>
+                <viewController storyboardIdentifier="LaunchScreen" id="launchVC" sceneMemberID="3"/>
+                <placeholder placeholderIdentifier="IBFirstResponder" id="firstResp" userLabel="First Responder" sceneMemberID="4"/>
+            </objects>
+        </scene>
+    </scenes>
+</document>

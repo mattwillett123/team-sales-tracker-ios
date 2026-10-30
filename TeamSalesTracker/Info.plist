@@ -1,75 +1,37 @@
-import SwiftUI
-
-struct AddDealView: View {
-    @EnvironmentObject var store: SalesStore
-    @Environment(\.dismiss) private var dismiss
-
-    @State private var selectedRep: UUID = UUID()
-    @State private var customer: String = ""
-    @State private var dealName: String = ""
-    @State private var value: String = ""
-    @State private var stage: DealStage = .prospect
-    @State private var closeDate: Date = Date().addingTimeInterval(14 * 86400)
-    @State private var notes: String = ""
-
-    private var repOptions: [SalesRep] {
-        store.reps
-    }
-
-    var body: some View {
-        Form {
-            Section("Sales rep") {
-                Picker("Representative", selection: $selectedRep) {
-                    ForEach(repOptions) { rep in
-                        Text(rep.name).tag(rep.id)
-                    }
-                }
-            }
-
-            Section("Deal details") {
-                TextField("Customer", text: $customer)
-                TextField("Deal name", text: $dealName)
-                TextField("Value", text: $value)
-                    .keyboardType(.decimalPad)
-                Picker("Stage", selection: $stage) {
-                    ForEach(DealStage.allCases, id: \.self) { stage in
-                        Text(stage.rawValue).tag(stage)
-                    }
-                }
-                DatePicker("Close date", selection: $closeDate, displayedComponents: .date)
-                TextField("Notes", text: $notes)
-            }
-
-            Button("Save deal") {
-                guard let numericValue = Double(value), !customer.isEmpty, !dealName.isEmpty else { return }
-                let deal = SalesDeal(
-                    id: UUID(),
-                    repId: selectedRep,
-                    customer: customer,
-                    dealName: dealName,
-                    value: numericValue,
-                    stage: stage,
-                    closeDate: closeDate,
-                    notes: notes
-                )
-                store.addDeal(deal)
-                dismiss()
-            }
-            .frame(maxWidth: .infinity, alignment: .center)
-            .buttonStyle(.borderedProminent)
-        }
-        .navigationTitle("New deal")
-        .onAppear {
-            if let first = repOptions.first {
-                selectedRep = first.id
-            }
-        }
-    }
-}
-
-#Preview {
-    NavigationStack {
-        AddDealView()
-            .environmentObject(SalesStore())
-    }
-}
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleDevelopmentRegion</key>
+    <string>$(DEVELOPMENT_LANGUAGE)</string>
+    <key>CFBundleExecutable</key>
+    <string>$(EXECUTABLE_NAME)</string>
+    <key>CFBundleIdentifier</key>
+    <string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+    <key>CFBundleInfoDictionaryVersion</key>
+    <string>6.0</string>
+    <key>CFBundleName</key>
+    <string>$(PRODUCT_NAME)</string>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    <key>CFBundleShortVersionString</key>
+    <string>1.0</string>
+    <key>CFBundleVersion</key>
+    <string>1</string>
+    <key>LSRequiresIPhoneOS</key>
+    <true/>
+    <key>UILaunchStoryboardName</key>
+    <string>LaunchScreen</string>
+    <key>UILaunchScreen</key>
+    <dict>
+        <key>UIColorName</key>
+        <string>AccentColor</string>
+    </dict>
+    <key>UISupportedInterfaceOrientations</key>
+    <array>
+        <string>UIInterfaceOrientationPortrait</string>
+        <string>UIInterfaceOrientationLandscapeLeft</string>
+        <string>UIInterfaceOrientationLandscapeRight</string>
+    </array>
+</dict>
+</plist>
