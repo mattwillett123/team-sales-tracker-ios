@@ -1,0 +1,75 @@
+import SwiftUI
+
+struct AddDealView: View {
+    @EnvironmentObject var store: SalesStore
+    @Environment(\.dismiss) private var dismiss
+
+    @State private var selectedRep: UUID = UUID()
+    @State private var customer: String = ""
+    @State private var dealName: String = ""
+    @State private var value: String = ""
+    @State private var stage: DealStage = .prospect
+    @State private var closeDate: Date = Date().addingTimeInterval(14 * 86400)
+    @State private var notes: String = ""
+
+    private var repOptions: [SalesRep] {
+        store.reps
+    }
+
+    var body: some View {
+        Form {
+            Section("Sales rep") {
+                Picker("Representative", selection: $selectedRep) {
+                    ForEach(repOptions) { rep in
+                        Text(rep.name).tag(rep.id)
+                    }
+                }
+            }
+
+            Section("Deal details") {
+                TextField("Customer", text: $customer)
+                TextField("Deal name", text: $dealName)
+                TextField("Value", text: $value)
+                    .keyboardType(.decimalPad)
+                Picker("Stage", selection: $stage) {
+                    ForEach(DealStage.allCases, id: \.self) { stage in
+                        Text(stage.rawValue).tag(stage)
+                    }
+                }
+                DatePicker("Close date", selection: $closeDate, displayedComponents: .date)
+                TextField("Notes", text: $notes)
+            }
+
+            Button("Save deal") {
+                guard let numericValue = Double(value), !customer.isEmpty, !dealName.isEmpty else { return }
+                let deal = SalesDeal(
+                    id: UUID(),
+                    repId: selectedRep,
+                    customer: customer,
+                    dealName: dealName,
+                    value: numericValue,
+                    stage: stage,
+                    closeDate: closeDate,
+                    notes: notes
+                )
+                store.addDeal(deal)
+                dismiss()
+            }
+            .frame(maxWidth: .infinity, alignment: .center)
+            .buttonStyle(.borderedProminent)
+        }
+        .navigationTitle("New deal")
+        .onAppear {
+            if let first = repOptions.first {
+                selectedRep = first.id
+            }
+        }
+    }
+}
+
+#Preview {
+    NavigationStack {
+        AddDealView()
+            .environmentObject(SalesStore())
+    }
+}
