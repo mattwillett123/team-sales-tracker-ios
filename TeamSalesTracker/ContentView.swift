@@ -23,7 +23,7 @@ final class SalesStore: ObservableObject {
             SalesDeal(id: UUID(), repId: reps[2].id, customer: "Helio Group", dealName: "Global Talent Dashboard", value: 52000, stage: .proposal, closeDate: Calendar.current.date(byAdding: .day, value: 18, to: now) ?? now, notes: "Negotiating multi-year contract."),
             SalesDeal(id: UUID(), repId: reps[2].id, customer: "Fjord Systems", dealName: "Customer Success Suite", value: 36000, stage: .closed, closeDate: Calendar.current.date(byAdding: .day, value: -5, to: now) ?? now, notes: "Champion secured."),
             SalesDeal(id: UUID(), repId: reps[3].id, customer: "Oak & Pine", dealName: "Data Integration Upgrade", value: 74000, stage: .prospect, closeDate: Calendar.current.date(byAdding: .day, value: 27, to: now) ?? now, notes: "Initial discovery call complete."),
-            SalesDeal(id: UUID(), repId: reps[3].id, customer: "Redstone Health", dealName: "Reporting Platform", value: 58000, stage: .closed, closeDate: Calendar.current.date(byAdding: .day, value: -8, to: now) ?? now, notes: "Board approval received."),
+            SalesDeal(id: UUID(), repId: reps[3].id, customer: "Redstone Health", dealName: "Reporting Platform", value: 58000, stage: .closed, closeDate: Calendar.current.date(byAdding: .day, value: -8, to: now) ?? now, notes: "Board approval received.")
         ]
 
         self.reps = reps
@@ -36,7 +36,7 @@ final class SalesStore: ObservableObject {
         ]
     }
 
-    var totalRevenue: Double {
+    var closedRevenue: Double {
         deals.filter { $0.stage == .closed }.reduce(0) { $0 + $1.value }
     }
 
@@ -49,6 +49,10 @@ final class SalesStore: ObservableObject {
         return deals.reduce(0) { $0 + $1.value } / Double(deals.count)
     }
 
+    var totalDeals: Int {
+        deals.count
+    }
+
     var stageBreakdown: [DealStage: Double] {
         var result: [DealStage: Double] = [:]
         for stage in DealStage.allCases {
@@ -57,11 +61,59 @@ final class SalesStore: ObservableObject {
         return result
     }
 
+    var maxStageValue: Double {
+        stageBreakdown.values.max() ?? 1
+    }
+
     func addDeal(_ deal: SalesDeal) {
-        deals.append(deal)
+        deals.insert(deal, at: 0)
     }
 
     func rep(for id: UUID) -> SalesRep? {
         reps.first { $0.id == id }
+    }
+
+    func activity(for repID: UUID) -> [ActivityEntry] {
+        activities.filter { $0.repId == repID }.sorted { $0.date > $1.date }
+    }
+}
+
+extension Double {
+    var asCurrency: String {
+        NumberFormatter.currency.string(from: NSNumber(value: self)) ?? "$0"
+    }
+}
+
+extension NumberFormatter {
+    static let currency: NumberFormatter = {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .currency
+        formatter.locale = Locale(identifier: "en_US")
+        return formatter
+    }()
+}
+
+extension Color {
+    init(hex: String) {
+        let hex = hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
+        var int: UInt64 = 0
+        Scanner(string: hex).scanHexInt64(&int)
+        let a, r, g, b: UInt64
+        switch hex.count {
+        case 3:
+            (a, r, g, b) = (255, (int >> 8) * 17, (int >> 4 & 0xF) * 17, (int & 0xF) * 17)
+        case 6:
+            (a, r, g, b) = (255, int >> 16, int >> 8 & 0xFF, int & 0xFF)
+        default:
+            (a, r, g, b) = (255, 0, 0, 0)
+        }
+
+        self.init(
+            .sRGB,
+            red: Double(r) / 255,
+            green: Double(g) / 255,
+            blue: Double(b) / 255,
+            opacity: Double(a) / 255
+        )
     }
 }

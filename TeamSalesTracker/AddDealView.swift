@@ -2,96 +2,118 @@ import SwiftUI
 
 struct ContentView: View {
     @EnvironmentObject var store: SalesStore
+    @State private var isAddingDeal = false
 
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
                     headerCard
-
                     summaryCards
-
                     pipelineSection
-
-                    repsSection
+                    teamSection
+                    activitySection
                 }
                 .padding()
             }
+            .background(Color(.systemGroupedBackground))
             .navigationTitle("Sales Tracker")
             .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    NavigationLink(destination: AddDealView()) {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        isAddingDeal = true
+                    } label: {
                         Image(systemName: "plus.circle.fill")
                             .font(.title2)
                     }
                 }
             }
+            .sheet(isPresented: $isAddingDeal) {
+                AddDealView()
+            }
         }
     }
 
     private var headerCard: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Team performance")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-
+        VStack(alignment: .leading, spacing: 14) {
             HStack {
-                VStack(alignment: .leading) {
-                    Text("$\(store.totalRevenue.formatted(.currency(code: "USD")))")
-                        .font(.largeTitle.bold())
-                    Text("Closed revenue this month")
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("MAY PERFORMANCE")
+                        .font(.caption.bold())
                         .foregroundStyle(.secondary)
+                    Text(store.closedRevenue.asCurrency)
+                        .font(.system(size: 32, weight: .bold))
+                        .foregroundStyle(.primary)
                 }
 
                 Spacer()
 
-                Circle()
-                    .fill(LinearGradient(colors: [.green, .mint], startPoint: .topLeading, endPoint: .bottomTrailing))
-                    .frame(width: 50, height: 50)
-                    .overlay {
-                        Image(systemName: "arrow.up.right")
-                            .foregroundStyle(.white)
-                    }
+                Image(systemName: "arrow.up.right.circle.fill")
+                    .resizable()
+                    .frame(width: 42, height: 42)
+                    .foregroundStyle(.green)
+            }
+
+            HStack(spacing: 12) {
+                StatTag(label: "Pipeline", value: store.pipelineValue.asCurrency, color: .blue)
+                StatTag(label: "Target", value: "82%", color: .green)
             }
         }
         .padding()
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color(.secondarySystemBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .background(
+            LinearGradient(
+                colors: [Color.blue.opacity(0.16), Color.green.opacity(0.12)],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
     }
 
     private var summaryCards: some View {
         HStack(spacing: 12) {
-            SummaryCard(title: "Pipeline", value: store.pipelineValue.asCurrency, tint: .blue)
+            SummaryCard(title: "Closed", value: store.closedRevenue.asCurrency, tint: .green)
             SummaryCard(title: "Avg deal", value: store.averageDealValue.asCurrency, tint: .orange)
-            SummaryCard(title: "Deals", value: "\(store.deals.count)", tint: .green)
+            SummaryCard(title: "Deals", value: "\(store.totalDeals)", tint: .blue)
         }
     }
 
     private var pipelineSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Pipeline by stage")
-                .font(.headline)
+            SectionHeader(title: "Pipeline by stage")
 
-            VStack(spacing: 10) {
+            VStack(spacing: 12) {
                 ForEach(DealStage.allCases, id: \ .self) { stage in
-                    let value = store.stageBreakdown[stage] ?? 0
-                    PipelineRow(stage: stage, value: value)
+                    PipelineRow(stage: stage, value: store.stageBreakdown[stage] ?? 0, maxValue: store.maxStageValue)
                 }
             }
         }
     }
 
-    private var repsSection: some View {
+    private var teamSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Sales team")
-                .font(.headline)
+            SectionHeader(title: "Team")
 
-            ForEach(store.reps) { rep in
-                NavigationLink(destination: RepDetailView(rep: rep)) {
-                    RepCard(rep: rep)
+            VStack(spacing: 10) {
+                ForEach(store.reps) { rep in
+                    NavigationLink(destination: RepDetailView(rep: rep)) {
+                        TeamMemberRow(rep: rep)
+                    }
+                    .buttonStyle(.plain)
                 }
-                .buttonStyle(.plain)
+            }
+        }
+    }
+
+    private var activitySection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            SectionHeader(title: "Recent activity")
+
+            VStack(spacing: 8) {
+                ForEach(store.activities.sorted { $0.date > $1.date }.prefix(4)) { activity in
+                    ActivityRow(activity: activity)
+                }
             }
         }
     }
@@ -103,27 +125,61 @@ private struct SummaryCard: View {
     let tint: Color
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: 8) {
             Text(title)
                 .font(.caption)
                 .foregroundStyle(.secondary)
-
             Text(value)
                 .font(.title3.bold())
+                .foregroundStyle(.primary)
         }
         .padding()
-        .frame(maxWidth: .infinity, minHeight: 90)
+        .frame(maxWidth: .infinity, minHeight: 90, alignment: .leading)
         .background(tint.opacity(0.12))
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+    }
+}
+
+private struct StatTag: View {
+    let label: String
+    let value: String
+    let color: Color
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Circle()
+                .fill(color.opacity(0.22))
+                .frame(width: 8, height: 8)
+            Text(label)
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+            Text(value)
+                .font(.caption.bold())
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 7)
+        .background(Color(.secondarySystemBackground))
+        .clipShape(Capsule())
+    }
+}
+
+private struct SectionHeader: View {
+    let title: String
+
+    var body: some View {
+        Text(title)
+            .font(.headline)
+            .foregroundStyle(.primary)
     }
 }
 
 private struct PipelineRow: View {
     let stage: DealStage
     let value: Double
+    let maxValue: Double
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: 8) {
             HStack {
                 Text(stage.rawValue)
                     .font(.subheadline)
@@ -134,53 +190,59 @@ private struct PipelineRow: View {
 
             GeometryReader { geometry in
                 ZStack(alignment: .leading) {
-                    Capsule()
-                        .fill(Color(.systemGray5))
-
+                    Capsule().fill(Color(.systemGray5))
                     Capsule()
                         .fill(Color(hex: stage.accentColor))
-                        .frame(width: max(10, CGFloat(min(value / max(1, storeMaxValue), 1)) * geometry.size.width))
+                        .frame(width: max(8, (value / max(maxValue, 1)) * geometry.size.width))
                 }
             }
             .frame(height: 10)
         }
     }
-
-    private var storeMaxValue: Double {
-        Let values = DealStage.allCases.map { stage in
-            return 0
-        }
-        return 0
-    }
 }
 
-private struct RepCard: View {
+private struct TeamMemberRow: View {
     let rep: SalesRep
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                VStack(alignment: .leading) {
+        HStack(alignment: .center, spacing: 12) {
+            ZStack {
+                Circle()
+                    .fill(LinearGradient(colors: [.blue, .cyan], startPoint: .topLeading, endPoint: .bottomTrailing))
+                    .frame(width: 44, height: 44)
+                Text(initials)
+                    .font(.headline)
+                    .foregroundStyle(.white)
+            }
+
+            VStack(alignment: .leading, spacing: 4) {
+                HStack {
                     Text(rep.name)
                         .font(.headline)
-                    Text("\(rep.team) · \(rep.region)")
+                    Spacer()
+                    Text("\(rep.dealsClosed) wins")
+                        .font(.caption.bold())
+                        .foregroundStyle(.green)
+                }
+
+                Text("\(rep.team) • \(rep.region)")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+
+                HStack {
+                    ProgressView(value: min(rep.currentRevenue / max(rep.monthlyTarget, 1), 1.0))
+                        .progressViewStyle(.linear)
+                        .tint(.green)
+                }
+
+                HStack {
+                    Text(rep.currentRevenue.asCurrency)
+                        .font(.caption.bold())
+                    Spacer()
+                    Text("Target: \(rep.monthlyTarget.asCurrency)")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
-
-                Spacer()
-
-                Text("\(rep.dealsClosed) wins")
-                    .font(.caption.bold())
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 5)
-                    .background(Color.green.opacity(0.14))
-                    .clipShape(Capsule())
-            }
-
-            HStack {
-                StatPill(label: "Target", value: rep.monthlyTarget.asCurrency)
-                StatPill(label: "Revenue", value: rep.currentRevenue.asCurrency)
             }
         }
         .padding()
@@ -188,43 +250,61 @@ private struct RepCard: View {
         .background(Color(.secondarySystemBackground))
         .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
     }
+
+    private var initials: String {
+        let parts = rep.name.split(separator: " ")
+        let first = parts.first?.first.map(String.init) ?? ""
+        let last = parts.count > 1 ? parts.last?.first.map(String.init) ?? "" : ""
+        return first + last
+    }
 }
 
-private struct StatPill: View {
-    let label: String
-    let value: String
+private struct ActivityRow: View {
+    let activity: ActivityEntry
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(label)
+        HStack(alignment: .top, spacing: 10) {
+            Circle()
+                .fill(Color.blue.opacity(0.15))
+                .frame(width: 10, height: 10)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(activity.title)
+                    .font(.subheadline.bold())
+                Text(activity.details)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            Spacer()
+            Text(dateFormatter.string(from: activity.date))
                 .font(.caption2)
                 .foregroundStyle(.secondary)
-            Text(value)
-                .font(.subheadline.bold())
         }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 8)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color(.systemBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+        .padding(.vertical, 4)
     }
+
+    private let dateFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "MMM d"
+        return formatter
+    }()
 }
 
 struct RepDetailView: View {
     let rep: SalesRep
     @EnvironmentObject var store: SalesStore
 
-    private var repDeals: [SalesDeal] {
+    var repDeals: [SalesDeal] {
         store.deals.filter { $0.repId == rep.id }
     }
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 18) {
-                VStack(alignment: .leading, spacing: 8) {
+            VStack(alignment: .leading, spacing: 20) {
+                VStack(alignment: .leading, spacing: 6) {
                     Text(rep.name)
                         .font(.largeTitle.bold())
-                    Text("\(rep.team) · \(rep.region)")
+                    Text("\(rep.team) • \(rep.region)")
+                        .font(.headline)
                         .foregroundStyle(.secondary)
                 }
 
@@ -233,40 +313,11 @@ struct RepDetailView: View {
                     SummaryCard(title: "Target", value: rep.monthlyTarget.asCurrency, tint: .blue)
                 }
 
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Deals")
-                        .font(.headline)
+                VStack(alignment: .leading, spacing: 12) {
+                    SectionHeader(title: "Open deals")
 
                     ForEach(repDeals) { deal in
-                        VStack(alignment: .leading, spacing: 6) {
-                            HStack {
-                                Text(deal.dealName)
-                                    .font(.subheadline.bold())
-                                Spacer()
-                                Text(deal.value.asCurrency)
-                                    .font(.subheadline.bold())
-                            }
-
-                            Text(deal.customer)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-
-                            HStack {
-                                Text(deal.stage.rawValue)
-                                    .font(.caption)
-                                    .padding(6)
-                                    .background(Color(hex: deal.stage.accentColor).opacity(0.12))
-                                    .clipShape(Capsule())
-                                Spacer()
-                                Text(dateFormatter.string(from: deal.closeDate))
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                            }
-                        }
-                        .padding()
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(Color(.secondarySystemBackground))
-                        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                        DealCardRow(deal: deal)
                     }
                 }
             }
@@ -274,45 +325,48 @@ struct RepDetailView: View {
         }
         .navigationTitle(rep.name)
     }
+}
 
-    private let dateFormatter: DateFormatter = {
+private struct DealCardRow: View {
+    let deal: SalesDeal
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text(deal.dealName)
+                    .font(.headline)
+                Spacer()
+                Text(deal.value.asCurrency)
+                    .font(.headline.bold())
+            }
+
+            Text(deal.customer)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+
+            HStack {
+                Text(deal.stage.rawValue)
+                    .font(.caption)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 5)
+                    .background(Color(hex: deal.stage.accentColor).opacity(0.18))
+                    .clipShape(Capsule())
+                Spacer()
+                Text(formattedDate)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .padding()
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color(.secondarySystemBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+    }
+
+    private var formattedDate: String {
         let formatter = DateFormatter()
         formatter.dateStyle = .medium
-        return formatter
-    }()
-}
-
-private extension Double {
-    var asCurrency: String {
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .currency
-        formatter.locale = Locale(identifier: "en_US")
-        return formatter.string(from: NSNumber(value: self)) ?? "$0"
-    }
-}
-
-private extension Color {
-    init(hex: String) {
-        let hex = hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
-        var int: UInt64 = 0
-        Scanner(string: hex).scanHexInt64(&int)
-        let a, r, g, b: UInt64
-        switch hex.count {
-        case 3: // RGB (12-bit)
-            (a, r, g, b) = (255, (int >> 8) * 17, (int >> 4 & 0xF) * 17, (int & 0xF) * 17)
-        case 6: // RGB (24-bit)
-            (a, r, g, b) = (255, int >> 16, int >> 8 & 0xFF, int & 0xFF)
-        default:
-            (a, r, g, b) = (255, 0, 0, 0)
-        }
-
-        self.init(
-            .sRGB,
-            red: Double(r) / 255,
-            green: Double(g) / 255,
-            blue: Double(b) / 255,
-            opacity: Double(a) / 255
-        )
+        return formatter.string(from: deal.closeDate)
     }
 }
 

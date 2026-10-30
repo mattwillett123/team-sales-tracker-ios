@@ -26,6 +26,16 @@ enum DealStage: String, CaseIterable, Codable {
         case .closed: return "#22C55E"
         }
     }
+
+    var shortLabel: String {
+        switch self {
+        case .prospect: return "New"
+        case .qualified: return "Qualified"
+        case .proposal: return "Proposal"
+        case .negotiation: return "Negotiating"
+        case .closed: return "Won"
+        }
+    }
 }
 
 struct SalesDeal: Identifiable, Codable, Hashable {
