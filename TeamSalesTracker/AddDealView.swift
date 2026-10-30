@@ -43,7 +43,6 @@ struct ContentView: View {
                         .foregroundStyle(.secondary)
                     Text(store.closedRevenue.asCurrency)
                         .font(.system(size: 32, weight: .bold))
-                        .foregroundStyle(.primary)
                 }
 
                 Spacer()
@@ -131,7 +130,6 @@ private struct SummaryCard: View {
                 .foregroundStyle(.secondary)
             Text(value)
                 .font(.title3.bold())
-                .foregroundStyle(.primary)
         }
         .padding()
         .frame(maxWidth: .infinity, minHeight: 90, alignment: .leading)
@@ -169,7 +167,6 @@ private struct SectionHeader: View {
     var body: some View {
         Text(title)
             .font(.headline)
-            .foregroundStyle(.primary)
     }
 }
 
@@ -229,11 +226,9 @@ private struct TeamMemberRow: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
 
-                HStack {
-                    ProgressView(value: min(rep.currentRevenue / max(rep.monthlyTarget, 1), 1.0))
-                        .progressViewStyle(.linear)
-                        .tint(.green)
-                }
+                ProgressView(value: min(rep.currentRevenue / max(rep.monthlyTarget, 1), 1.0))
+                    .progressViewStyle(.linear)
+                    .tint(.green)
 
                 HStack {
                     Text(rep.currentRevenue.asCurrency)

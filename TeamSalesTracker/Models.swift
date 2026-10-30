@@ -1,6 +1,6 @@
 import Foundation
 
-struct SalesRep: Identifiable, Hashable {
+struct SalesRep: Identifiable, Codable, Hashable {
     let id: UUID
     let name: String
     let team: String

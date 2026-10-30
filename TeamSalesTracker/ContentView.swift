@@ -2,11 +2,20 @@ import Foundation
 import SwiftUI
 
 final class SalesStore: ObservableObject {
+    private let storageKey = "team_sales_tracker_store_v1"
+
     @Published var reps: [SalesRep]
     @Published var deals: [SalesDeal]
     @Published var activities: [ActivityEntry]
 
     init() {
+        if let saved = Self.loadStoredData() {
+            self.reps = saved.reps
+            self.deals = saved.deals
+            self.activities = saved.activities
+            return
+        }
+
         let reps: [SalesRep] = [
             SalesRep(id: UUID(), name: "Aisha Patel", team: "Enterprise", region: "North America", monthlyTarget: 120000, currentRevenue: 108000, dealsClosed: 9),
             SalesRep(id: UUID(), name: "Marcus Lee", team: "SMB", region: "EMEA", monthlyTarget: 95000, currentRevenue: 82000, dealsClosed: 7),
@@ -26,14 +35,17 @@ final class SalesStore: ObservableObject {
             SalesDeal(id: UUID(), repId: reps[3].id, customer: "Redstone Health", dealName: "Reporting Platform", value: 58000, stage: .closed, closeDate: Calendar.current.date(byAdding: .day, value: -8, to: now) ?? now, notes: "Board approval received.")
         ]
 
-        self.reps = reps
-        self.deals = deals
-        self.activities = [
+        let activities: [ActivityEntry] = [
             ActivityEntry(id: UUID(), repId: reps[0].id, title: "Demo completed", date: Calendar.current.date(byAdding: .day, value: -1, to: now) ?? now, details: "Customer walked through automation workflows."),
             ActivityEntry(id: UUID(), repId: reps[1].id, title: "Proposal sent", date: Calendar.current.date(byAdding: .day, value: -4, to: now) ?? now, details: "Pricing agreement shared to finance."),
             ActivityEntry(id: UUID(), repId: reps[2].id, title: "Renewal call", date: Calendar.current.date(byAdding: .day, value: -6, to: now) ?? now, details: "Discussed expansion scope with leadership."),
             ActivityEntry(id: UUID(), repId: reps[3].id, title: "Champion update", date: Calendar.current.date(byAdding: .day, value: -2, to: now) ?? now, details: "Stakeholder is excited about ROI story.")
         ]
+
+        self.reps = reps
+        self.deals = deals
+        self.activities = activities
+        save()
     }
 
     var closedRevenue: Double {
@@ -62,11 +74,17 @@ final class SalesStore: ObservableObject {
     }
 
     var maxStageValue: Double {
-        stageBreakdown.values.max() ?? 1
+        max(1, stageBreakdown.values.max() ?? 1)
     }
 
     func addDeal(_ deal: SalesDeal) {
         deals.insert(deal, at: 0)
+        save()
+    }
+
+    func deleteDeal(id: UUID) {
+        deals.removeAll { $0.id == id }
+        save()
     }
 
     func rep(for id: UUID) -> SalesRep? {
@@ -75,6 +93,25 @@ final class SalesStore: ObservableObject {
 
     func activity(for repID: UUID) -> [ActivityEntry] {
         activities.filter { $0.repId == repID }.sorted { $0.date > $1.date }
+    }
+
+    private func save() {
+        let payload = PersistedData(reps: reps, deals: deals, activities: activities)
+        let encoder = JSONEncoder()
+        guard let data = try? encoder.encode(payload) else { return }
+        UserDefaults.standard.set(data, forKey: storageKey)
+    }
+
+    private static func loadStoredData() -> PersistedData? {
+        guard let data = UserDefaults.standard.data(forKey: "team_sales_tracker_store_v1") else { return nil }
+        let decoder = JSONDecoder()
+        return try? decoder.decode(PersistedData.self, from: data)
+    }
+
+    private struct PersistedData: Codable {
+        let reps: [SalesRep]
+        let deals: [SalesDeal]
+        let activities: [ActivityEntry]
     }
 }
 
@@ -95,11 +132,12 @@ extension NumberFormatter {
 
 extension Color {
     init(hex: String) {
-        let hex = hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
+        let cleaned = hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
         var int: UInt64 = 0
-        Scanner(string: hex).scanHexInt64(&int)
+        Scanner(string: cleaned).scanHexInt64(&int)
+
         let a, r, g, b: UInt64
-        switch hex.count {
+        switch cleaned.count {
         case 3:
             (a, r, g, b) = (255, (int >> 8) * 17, (int >> 4 & 0xF) * 17, (int & 0xF) * 17)
         case 6:
